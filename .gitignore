@@ -3,3 +3,7 @@
 
 # Dependency directories
 node_modules/
+
+Data/
+
+.env
