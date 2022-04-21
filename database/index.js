@@ -1,25 +1,41 @@
-const { Client } = require('pg');
+const { Pool } = require('pg');
 require('dotenv').config();
 // const { InitialLoad } = require('./schema.sql');
 
-const client = new Client({
+const pool = new Pool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
-  // port: process.env.DB_PORT,
+  port: 4562,
 });
-client.connect()
-  .then(() => {
+const count = 2;
+const page = 1;
+const question_id = 36;
+const answer_id = 5;
+
+pool.connect()
+  .then((client) => {
     console.log('db connected');
+    return client
+      .query(`
+      SELECT
+      id,
+      url
+  FROM photos
+  WHERE answer_id = ${answer_id}
+      `)
+      .then((res) => {
+        console.log(res);
+        client.release();
+      });
   })
   // .then(() => {
-  //   client.query(InitialLoad);
+  //   pool.query(InitialLoad);
   // })
-  .catch((err) => console.log('connection err', err))
-;
+  .catch((err) => console.log('connection err', err));
 
-// const res = await client.query('SELECT $1::text as message', ['Hello world!'])
+// const res = await pool.query('SELECT $1::text as message', ['Hello world!'])
 // console.log(res.rows[0].message); // Hello world!
-// await client.end();
-exports.db = client;
+// await pool.end();
+exports.db = pool;
