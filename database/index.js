@@ -7,7 +7,7 @@ const pool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
-  port: 4562,
+  // port: process.env.DB_PORT,
 });
 const count = 2;
 const page = 1;
@@ -19,12 +19,17 @@ pool.connect()
     console.log('db connected');
     return client
       .query(`
-      SELECT
-      id,
-      url
-  FROM photos
-  WHERE answer_id = ${answer_id}
-      `)
+
+      SELECT json_build_object(
+        'body', body
+      )
+      FROM answers AS a
+      INNER JOIN photos AS p
+      ON a.id = p.answer_id
+      WHERE reported = 'false' AND question_id=${question_id}
+      LIMIT ${count} OFFSET (${count} *(${page} - 1))
+
+    `)
       .then((res) => {
         console.log(res);
         client.release();

@@ -1,1 +1,32 @@
-SELECT * FROM answers LIMIT 3;
+
+-- Get answers
+-- SELECT
+--   json_build_object(
+--     'question', 1,
+--     'page', 0,
+--     'count', 5,
+--     'results', results
+--     )
+-- FROM (
+--   SELECT coalesce(json_agg(answers_rows), '[]') AS results
+--   FROM (
+--     SELECT
+--       a.id AS answer_id,
+--       body,
+--       date_written AS date,
+--       answerer_name,
+--       helpful AS helpfulness, (
+--       SELECT coalesce(json_agg(photos_rows), '[]') AS photos
+--       FROM (
+--         SELECT
+--           id,
+--           url
+--         FROM photos
+--         WHERE answer_id = a.id
+--         ) AS photos_rows
+--       )
+--     FROM answers AS a where question_id=888
+--   ) AS answers_rows
+-- ) AS _unused_
+
+
