@@ -8,6 +8,7 @@ module.exports.app = app;
 app.use(express.json());
 
 app.get('/qa/questions/:question_id/answers', models.listAnswers);
+app.get('/qa/questions', models.ListQuestions);
 
 app.listen(process.env.PORT);
 console.log(`Listening at http://localhost:${process.env.PORT}`);

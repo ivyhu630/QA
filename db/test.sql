@@ -113,3 +113,64 @@
 -- 	)
 -- ) AS results
 -- FROM result_rows
+
+--  GET QuestionList usig JOIN
+-- WITH raw_rows AS
+-- (
+-- 	SELECT
+-- 		q.id AS question_id,
+-- 		q.body AS question,
+-- 		a.id AS answer_id,
+-- 		a.body AS answer,
+-- 		p.id AS photo_id,
+-- 		p.url AS photo_url
+-- 	FROM questions q
+-- 	LEFT JOIN answers a on q.id = a.question_id
+-- 	LEFT JOIN photos p on a.id = p.answer_id
+-- 	WHERE q.product_id = 1
+-- ),
+-- answer_rows AS
+-- (
+-- 	SELECT
+-- 		question_id,
+-- 		question,
+-- 		answer_id,
+-- 		answer,
+-- 		coalesce(json_agg(
+-- 			json_build_object(
+-- 				'id', photo_id,
+-- 				'url', photo_url
+-- 			)
+-- 		) FILTER (WHERE photo_id IS NOT NULL), '[]') AS photos
+-- 	FROM raw_rows
+-- 	GROUP BY question_id, question, answer_id, answer
+-- ),
+-- limited_rows AS
+-- (
+-- 	SELECT partitioned.* FROM
+-- 	(
+-- 		SELECT ROW_NUMBER() OVER (PARTITION BY question_id ORDER BY answer_id) AS r, t.* FROM answer_rows t
+-- 	) partitioned WHERE partitioned.r <= 2
+-- ),
+-- agg_row AS
+-- (
+-- 	SELECT
+-- 		a.question_id,
+-- 		a.question,
+-- 		coalesce(json_object_agg(
+-- 			a.answer_id,
+-- 			json_build_object(
+-- 				'id', a.answer_id::INT,
+-- 				'body', a.answer,
+-- 				'photos', a.photos
+-- 			)
+-- 		) FILTER (WHERE a.answer_id IS NOT NULL), '{}') AS answers
+-- 	FROM limited_rows a
+-- 	GROUP BY a.question_id, a.question
+-- )
+-- SELECT json_build_object(
+-- 	'product_id', 5,
+-- 	'results', json_agg(row_to_json(agg_row))
+-- )
+-- FROM agg_row
+
