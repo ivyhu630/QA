@@ -1,5 +1,8 @@
 const db = require('../db');
 
+const header = {
+  headers: 'Access-Control-Allow-Origin: *',
+};
 module.exports = {
   listAnswers: async (req, res) => {
     const { question_id } = req.params;
@@ -115,7 +118,7 @@ module.exports = {
     `;
     try {
       const { rows } = await db.query(query, [product_id, body, name, email]);
-      res.status(201).send(`Inserted as question id ${rows[0].id}`);
+      res.status(201).send(`Question inserted successfully as question id ${rows[0].id}`);
     } catch (err) {
       console.log(err);
       res.status(500).send(err);
@@ -124,22 +127,79 @@ module.exports = {
   PostAnswers: async (req, res) => {
     const { question_id } = req.params;
     const { body, name, email, photos } = req.body;
-    const query2 = `
+    const query = `
+      WITH a as (
+        INSERT INTO answers (question_id,body,answerer_name,email)
+        VALUES ($1, $2, $3, $4 )
+        RETURNING id
+      )
       INSERT INTO photos (answer_id, url)
-      VALUES ($1, unnest($2) )
-      RETURNING id
-    `;
-    const query1 = `
-      INSERT INTO answers (question_id,body,answerer_name,email)
-      VALUES ($1, $2, $3, $4 )
-      RETURNING id
+      VALUES ((SELECT id FROM a), unnest($5::text[]))
+      RETURNING  (answer_id, id)
     `;
     try {
-      const { rows } = await db.query(query1, [question_id, body, name, email]);
-      const answer_id = rows[0].id
-      const data = await db.query(query2, [question_id, body, name, email]);
-
-      res.status(201).send(`Inserted as answer id ${rows[0].id}`);
+      await db.query(query, [question_id, body, name, email, photos]);
+      res.status(201).send('Answers and photos inserted successfully');
+    } catch (err) {
+      console.log(err);
+      res.status(500).send(err);
+    }
+  },
+  MarkQuestionHelpful: async (req, res) => {
+    const { question_id } = req.params;
+    const query = `
+      UPDATE questions
+        SET helpful = helpful + 1
+      WHERE id = $1
+    `;
+    try {
+      await db.query(query, [question_id]);
+      res.status(204).send('vote success for question helpfulness');
+    } catch (err) {
+      console.log(err);
+      res.status(500).send(err);
+    }
+  },
+  ReportQuestion: async (req, res) => {
+    const { question_id } = req.params;
+    const query = `
+      UPDATE questions
+        SET reported = TRUE
+      WHERE id = $1
+    `;
+    try {
+      await db.query(query, [question_id]);
+      res.status(204).send('reported question');
+    } catch (err) {
+      console.log(err);
+      res.status(500).send(err);
+    }
+  },
+  MarkAnswerHelpful: async (req, res) => {
+    const { answer_id } = req.params;
+    const query = `
+      UPDATE answers
+        SET helpful = helpful + 1
+      WHERE id = $1
+    `;
+    try {
+      await db.query(query, [answer_id]);
+      res.status(204).send('vote success for answer helpfulness');
+    } catch (err) {
+      console.log(err);
+      res.status(500).send(err);
+    }
+  },
+  ReportAnswer: async (req, res) => {
+    const { answer_id } = req.params;
+    const query = `
+      UPDATE answers
+        SET reported = TRUE
+      WHERE id = $1
+    `;
+    try {
+      await db.query(query, [answer_id]);
+      res.status(204).send('reported answer');
     } catch (err) {
       console.log(err);
       res.status(500).send(err);
