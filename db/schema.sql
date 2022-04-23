@@ -43,21 +43,10 @@ CREATE TABLE Photos (
   PRIMARY KEY (id)
 );
 
-
-
-
--- ---
--- Test Data
--- ---
-
--- INSERT INTO QuestionList (id,product_id) VALUES
--- ('','');
--- INSERT INTO AnswerList (id,question_id) VALUES
--- ('','');
--- INSERT INTO Questions (id,question_body,question_date,asker_name,question_helpfulness,reported,email) VALUES
--- ('','','','','','','');
--- INSERT INTO Answers (id,body,date,answerer_name,helpfulness,email,reported) VALUES
--- ('','','','','','','');
--- INSERT INTO Photos (id,url,answer_id) VALUES
--- ('','','');
-
+CREATE INDEX product_id_idx ON questions (product_id);
+CREATE INDEX question_id_idx ON questions (id);
+CREATE INDEX photoAnswer_id_idx ON photos (answer_id);
+CREATE INDEX reported_question_idx ON questions (reported);
+CREATE INDEX reported_answers_idx ON answers (reported);
+CREATE INDEX answer_id_idx ON answers (id);
+CREATE INDEX answer_question_id_idx ON answers (question_id);

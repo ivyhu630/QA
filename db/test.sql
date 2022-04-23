@@ -1,176 +1,123 @@
+-- TEST FOR LOCAL QUERY TIME ----
+-- Run in psql shell
+--  \i db/test.sql
 
--- *****Get answers with no JOIN*****
--- SELECT
---   json_build_object(
---     'question', 1,
---     'page', 0,
---     'count', 5,
---     'results', results
---     )
--- FROM (
---   SELECT coalesce(json_agg(answers_rows), '[]') AS results
---   FROM (
---     SELECT
---       a.id AS answer_id,
---       body,
---       date_written AS date,
---       answerer_name,
---       helpful AS helpfulness, (
---       SELECT coalesce(json_agg(photos_rows), '[]') AS photos
---       FROM (
---         SELECT
---           id,
---           url
---         FROM photos
---         WHERE answer_id = a.id
---         ) AS photos_rows
---       )
---     FROM answers AS a WHERE question_id=888
---   ) AS answers_rows
--- ) AS _unused_
+---------------------------------------
+-- HELPER FUNCTION GENERATE RANDOM NUM
+---------------------------------------
+-- select count (distinct id) from questions;  3518975
+-- select count (distinct product_id) from questions;899855
+-- photos: 2063766
 
+CREATE OR REPLACE FUNCTION random_between(low INT ,high INT)
+   RETURNS INT AS
+$$
+BEGIN
+   RETURN floor(random()* (high-low + 1) + low);
+END;
+$$ language 'plpgsql' STRICT;
+------------------------
+-- TEST GET QUESTION
+------------------------
+EXPLAIN ANALYZE SELECT
+  q.product_id::TEXT,
+  json_agg(
+    json_build_object(
+      'question_id', id,
+      'question_body', body,
+      'question_date', date_written,
+      'asker_name', asker_name,
+      'question_helpfulness', helpful,
+      'reported', reported,
+      'answers', (
+        SELECT coalesce(json_object_agg(
+          id,
+          json_build_object(
+            'id', id,
+            'body', body,
+            'date', date,
+            'answerer_name', answerer_name,
+            'helpfulness', helpfulness,
+            'photos', photos
+          )
+        ),'{}') AS result
+        FROM (
+          SELECT
+            id,
+            body,
+            date_written AS date,
+            answerer_name,
+            helpful AS helpfulness,
+            (
+              SELECT coalesce(json_agg(photos), '[]') AS photos
+                FROM (
+                  SELECT id, url
+                  FROM photos p
+                  WHERE p.answer_id = a.id
+                ) AS photos)
+          FROM answers a
+          WHERE a.question_id = q.id
+            AND reported = false
+          LIMIT 2
+          ) AS answers
+      )
+    )
+  ) as results
+FROM (
+  SELECT *
+  FROM questions
+  WHERE product_id = (SELECT random_between(0, 899855))
+    AND reported = false
+  LIMIT 5
+) as q
+GROUP BY 1;
 
+------------------------
+-- TEST GET ANSWER
+------------------------
+EXPLAIN ANALYZE SELECT
+  a.question_id::TEXT as question,
+  json_agg(
+    json_build_object(
+      'answer_id', id,
+      'body', body,
+      'date', date_written,
+      'answerer_name', answerer_name,
+      'helpfulness', helpful,
+      'photos', (
+        SELECT coalesce(json_agg(photos), '[]')
+        FROM (
+          SELECT id, url
+          FROM photos p
+          WHERE p.answer_id = a.id
+        ) as photos
+      )
+    )
+  ) as results
+FROM (
+  SELECT *
+  FROM answers
+  WHERE question_id = (SELECT random_between(0, 3518975))
+    AND reported = false
+  LIMIT 5
+) as a
+GROUP BY 1;
+---------------------------
+-- TEST POST QUESTION ----
+---------------------------
+EXPLAIN ANALYZE INSERT INTO questions (product_id, body, asker_name, asker_email)
+VALUES ((SELECT random_between(0, 899855)), 'Test question body', 'Tester', 'test@gmail.com');
 
--- *****GET Questions with no JOIN*****
--- SELECT
---   json_build_object(
---     'product_id', 5,
---     'results', results
---     )
--- FROM
---   (
---   SELECT coalesce(json_agg(question_rows), '[]') AS results
---   FROM (
---     SELECT
---       q.id AS question_id,
---       body AS question_body,
---       date_written AS question_date,
---       asker_name,
---       helpful AS question_helpfulness,
---       reported,
---       (
---         SELECT
---           jsonb_object_agg(
---             id, answers
---           ) AS answers
---         FROM (
---           SELECT
---             a.id,
---             body,
---             date_written AS date,
---             answerer_name,
---             helpful AS helpfulness, (
---             SELECT coalesce(json_agg(photos_rows), '[]') AS photos
---             FROM (
---               SELECT
---                 id,
---                 url
---               FROM photos
---               WHERE answer_id = a.id
---               ) AS photos_rows
---             )
---           FROM answers AS a
---           WHERE question_id=q.id
---           LIMIT 2
---         ) AS answers
---       )
---     FROM questions AS q
---     WHERE q.product_id=5
---   ) AS question_rows
---   ) AS _unused_
-
--- ****GET answers using JOIN*****
--- WITH result_rows AS (
--- 	SELECT
--- 		a.id AS answer_id,
--- 		body,
--- 		date_written AS date,
--- 		answerer_name,
--- 		helpful AS helpfulness,
--- 		coalesce(
--- 		json_agg(
--- 			json_build_object('id', p.id, 'url', p.url)
--- 		) FILTER (WHERE p.id IS NOT NULL), '[]'
--- 		) AS photos
--- 	FROM answers a
--- 	LEFT JOIN photos p ON a.id=p.answer_id
--- 	WHERE a.question_id=1
--- 	GROUP BY a.id
--- )
--- SELECT json_build_object(
--- 	'question', 1,
--- 	'page', 0,
--- 	'count', 5,
--- 	'results', json_agg(
--- 		json_build_object(
--- 			'answer_id', answer_id,
--- 			'body', body,
--- 			'date', date,
--- 			'answerer_name', answerer_name,
--- 			'helpfulness', helpfulness,
--- 			'photos', photos
--- 		)
--- 	)
--- ) AS results
--- FROM result_rows
-
---  GET QuestionList usig JOIN
--- WITH raw_rows AS
--- (
--- 	SELECT
--- 		q.id AS question_id,
--- 		q.body AS question,
--- 		a.id AS answer_id,
--- 		a.body AS answer,
--- 		p.id AS photo_id,
--- 		p.url AS photo_url
--- 	FROM questions q
--- 	LEFT JOIN answers a on q.id = a.question_id
--- 	LEFT JOIN photos p on a.id = p.answer_id
--- 	WHERE q.product_id = 1
--- ),
--- answer_rows AS
--- (
--- 	SELECT
--- 		question_id,
--- 		question,
--- 		answer_id,
--- 		answer,
--- 		coalesce(json_agg(
--- 			json_build_object(
--- 				'id', photo_id,
--- 				'url', photo_url
--- 			)
--- 		) FILTER (WHERE photo_id IS NOT NULL), '[]') AS photos
--- 	FROM raw_rows
--- 	GROUP BY question_id, question, answer_id, answer
--- ),
--- limited_rows AS
--- (
--- 	SELECT partitioned.* FROM
--- 	(
--- 		SELECT ROW_NUMBER() OVER (PARTITION BY question_id ORDER BY answer_id) AS r, t.* FROM answer_rows t
--- 	) partitioned WHERE partitioned.r <= 2
--- ),
--- agg_row AS
--- (
--- 	SELECT
--- 		a.question_id,
--- 		a.question,
--- 		coalesce(json_object_agg(
--- 			a.answer_id,
--- 			json_build_object(
--- 				'id', a.answer_id::INT,
--- 				'body', a.answer,
--- 				'photos', a.photos
--- 			)
--- 		) FILTER (WHERE a.answer_id IS NOT NULL), '{}') AS answers
--- 	FROM limited_rows a
--- 	GROUP BY a.question_id, a.question
--- )
--- SELECT json_build_object(
--- 	'product_id', 5,
--- 	'results', json_agg(row_to_json(agg_row))
--- )
--- FROM agg_row
+---------------------------
+-- TEST POST ANSWER ----
+---------------------------
+EXPLAIN ANALYZE
+WITH a as (
+        INSERT INTO answers (question_id,body,answerer_name,email)
+        VALUES ((SELECT random_between(0, 3518975)), 'Test answer body', 'Tester', 'test@gmail.com')
+        RETURNING id
+      )
+      INSERT INTO photos (answer_id, url)
+      VALUES ((SELECT id FROM a), unnest(ARRAY['https://images.unsplash.com/photo-1511127088257-53ccfcc769fa?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1650&q=80']))
+      RETURNING  (answer_id, id);
 

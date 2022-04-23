@@ -1,0 +1,85 @@
+CREATE FUNCTION
+                                                                  QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------------
+ GroupAggregate  (cost=57734.89..998576.98 rows=1 width=64) (actual time=1186.951..1186.952 rows=1 loops=1)
+   Group Key: ((q.product_id)::text)
+   ->  Sort  (cost=57734.89..57734.91 rows=5 width=106) (actual time=462.465..462.467 rows=2 loops=1)
+         Sort Key: ((q.product_id)::text)
+         Sort Method: quicksort  Memory: 25kB
+         ->  Subquery Scan on q  (cost=0.26..57734.84 rows=5 width=106) (actual time=75.571..462.441 rows=2 loops=1)
+               ->  Limit  (cost=0.26..57734.76 rows=5 width=296) (actual time=75.568..462.437 rows=2 loops=1)
+                     InitPlan 3 (returns $2)
+                       ->  Result  (cost=0.00..0.26 rows=1 width=4) (actual time=0.286..0.286 rows=1 loops=1)
+                     ->  Seq Scan on questions  (cost=0.00..103922.10 rows=9 width=296) (actual time=75.565..462.434 rows=2 loops=1)
+                           Filter: ((NOT reported) AND (product_id = $2))
+                           Rows Removed by Filter: 3518975
+   SubPlan 2
+     ->  Aggregate  (cost=188168.39..188168.40 rows=1 width=32) (actual time=362.232..362.233 rows=1 loops=2)
+           ->  Limit  (cost=0.00..188168.36 rows=2 width=105) (actual time=246.571..361.897 rows=2 loops=2)
+                 ->  Seq Scan on answers a  (cost=0.00..752673.45 rows=8 width=105) (actual time=246.565..361.891 rows=2 loops=2)
+                       Filter: ((NOT reported) AND (question_id = q.id))
+                       Rows Removed by Filter: 548210
+                       SubPlan 1
+                         ->  Aggregate  (cost=68779.01..68779.01 rows=1 width=32) (actual time=148.809..148.809 rows=1 loops=4)
+                               ->  Seq Scan on photos p  (cost=0.00..68779.00 rows=1 width=132) (actual time=148.805..148.805 rows=0 loops=4)
+                                     Filter: (answer_id = a.id)
+                                     Rows Removed by Filter: 2063771
+ Planning Time: 1.007 ms
+ Execution Time: 1187.143 ms
+(25 rows)
+
+CREATE FUNCTION
+                                                             QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------
+ GroupAggregate  (cost=126526.22..470421.36 rows=1 width=64) (actual time=1315.471..1315.472 rows=1 loops=1)
+   Group Key: ((a.question_id)::text)
+   ->  Sort  (cost=126526.22..126526.23 rows=5 width=105) (actual time=867.152..867.153 rows=2 loops=1)
+         Sort Key: ((a.question_id)::text)
+         Sort Method: quicksort  Memory: 25kB
+         ->  Subquery Scan on a  (cost=0.26..126526.16 rows=5 width=105) (actual time=694.085..867.129 rows=2 loops=1)
+               ->  Limit  (cost=0.26..126526.09 rows=5 width=296) (actual time=694.076..867.118 rows=2 loops=1)
+                     InitPlan 2 (returns $1)
+                       ->  Result  (cost=0.00..0.26 rows=1 width=4) (actual time=0.253..0.253 rows=1 loops=1)
+                     ->  Seq Scan on answers  (cost=0.00..202441.33 rows=8 width=296) (actual time=694.074..867.115 rows=2 loops=1)
+                           Filter: ((NOT reported) AND (question_id = $1))
+                           Rows Removed by Filter: 6879316
+   SubPlan 1
+     ->  Aggregate  (cost=68779.01..68779.01 rows=1 width=32) (actual time=223.249..223.249 rows=1 loops=2)
+           ->  Seq Scan on photos p  (cost=0.00..68779.00 rows=1 width=132) (actual time=221.455..221.455 rows=0 loops=2)
+                 Filter: (answer_id = a.id)
+                 Rows Removed by Filter: 2063771
+ Planning Time: 0.378 ms
+ Execution Time: 1315.565 ms
+(19 rows)
+
+CREATE FUNCTION
+                                           QUERY PLAN
+-------------------------------------------------------------------------------------------------
+ Insert on questions  (cost=0.26..0.28 rows=0 width=0) (actual time=2.007..2.007 rows=0 loops=1)
+   InitPlan 1 (returns $0)
+     ->  Result  (cost=0.00..0.26 rows=1 width=4) (actual time=0.410..0.410 rows=1 loops=1)
+   ->  Result  (cost=0.00..0.02 rows=1 width=489) (actual time=1.485..1.485 rows=1 loops=1)
+ Planning Time: 0.125 ms
+ Execution Time: 2.358 ms
+(6 rows)
+
+CREATE FUNCTION
+                                               QUERY PLAN
+---------------------------------------------------------------------------------------------------------
+ Insert on photos  (cost=0.30..0.34 rows=1 width=524) (actual time=0.863..0.865 rows=1 loops=1)
+   CTE a
+     ->  Insert on answers  (cost=0.26..0.28 rows=1 width=489) (actual time=0.767..0.768 rows=1 loops=1)
+           InitPlan 1 (returns $0)
+             ->  Result  (cost=0.00..0.26 rows=1 width=4) (actual time=0.133..0.133 rows=1 loops=1)
+           ->  Result  (cost=0.00..0.02 rows=1 width=489) (actual time=0.167..0.167 rows=1 loops=1)
+   InitPlan 3 (returns $3)
+     ->  CTE Scan on a  (cost=0.00..0.02 rows=1 width=4) (actual time=0.772..0.772 rows=1 loops=1)
+   ->  Result  (cost=0.00..0.04 rows=1 width=524) (actual time=0.807..0.808 rows=1 loops=1)
+         ->  ProjectSet  (cost=0.00..0.02 rows=1 width=32) (actual time=0.007..0.008 rows=1 loops=1)
+               ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.001..0.001 rows=1 loops=1)
+ Planning Time: 0.413 ms
+ Trigger for constraint answers_question_id_fkey on answers: time=1.711 calls=1
+ Trigger for constraint photos_answer_id_fkey on photos: time=0.057 calls=1
+ Execution Time: 2.937 ms
+(15 rows)
+
