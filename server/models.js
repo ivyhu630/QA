@@ -106,6 +106,45 @@ module.exports = {
       res.status(500).send(err);
     }
   },
+  PostQuestions: async (req, res) => {
+    const { product_id, body, name, email } = req.body;
+    const query = `
+      INSERT INTO questions(product_id,body,asker_name,asker_email)
+      VALUES ($1, $2, $3, $4 )
+      RETURNING id
+    `;
+    try {
+      const { rows } = await db.query(query, [product_id, body, name, email]);
+      res.status(201).send(`Inserted as question id ${rows[0].id}`);
+    } catch (err) {
+      console.log(err);
+      res.status(500).send(err);
+    }
+  },
+  PostAnswers: async (req, res) => {
+    const { question_id } = req.params;
+    const { body, name, email, photos } = req.body;
+    const query2 = `
+      INSERT INTO photos (answer_id, url)
+      VALUES ($1, unnest($2) )
+      RETURNING id
+    `;
+    const query1 = `
+      INSERT INTO answers (question_id,body,answerer_name,email)
+      VALUES ($1, $2, $3, $4 )
+      RETURNING id
+    `;
+    try {
+      const { rows } = await db.query(query1, [question_id, body, name, email]);
+      const answer_id = rows[0].id
+      const data = await db.query(query2, [question_id, body, name, email]);
+
+      res.status(201).send(`Inserted as answer id ${rows[0].id}`);
+    } catch (err) {
+      console.log(err);
+      res.status(500).send(err);
+    }
+  },
 
 };
 

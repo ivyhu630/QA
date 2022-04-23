@@ -1,3 +1,5 @@
+-- psql -d qa -f db/schema.sql -a
+
 DROP DATABASE IF EXISTS qa;
 CREATE DATABASE qa;
 -- CONNECT qa;
@@ -11,8 +13,8 @@ CREATE TABLE Questions (
   date_written BIGINT,
   asker_name VARCHAR(100) NOT NULL,
   asker_email VARCHAR(100) NOT NULL,
-  reported BOOLEAN,
-  helpful INTEGER CHECK (helpful >= 0),
+  reported BOOLEAN DEFAULT FALSE,
+  helpful INTEGER DEFAULT 0,
   PRIMARY KEY (id)
 );
 
@@ -26,8 +28,8 @@ CREATE TABLE Answers (
   date_written BIGINT,
   answerer_name VARCHAR(100),
   email VARCHAR(100),
-  reported BOOLEAN,
-  helpful INTEGER CHECK (helpful >= 0),
+  reported BOOLEAN DEFAULT FALSE,
+  helpful INTEGER DEFAULT 0,
   PRIMARY KEY (id)
 );
 
