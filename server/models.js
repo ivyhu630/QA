@@ -1,8 +1,5 @@
 const db = require('../db');
 
-const header = {
-  headers: 'Access-Control-Allow-Origin: *',
-};
 module.exports = {
   listAnswers: async (req, res) => {
     const { question_id } = req.params;
@@ -207,4 +204,3 @@ module.exports = {
   },
 
 };
-
