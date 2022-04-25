@@ -44,9 +44,7 @@ CREATE TABLE Photos (
 );
 
 CREATE INDEX product_id_idx ON questions (product_id);
-CREATE INDEX question_id_idx ON questions (id);
 CREATE INDEX photoAnswer_id_idx ON photos (answer_id);
-CREATE INDEX reported_question_idx ON questions (reported);
-CREATE INDEX reported_answers_idx ON answers (reported);
-CREATE INDEX answer_id_idx ON answers (id);
 CREATE INDEX answer_question_id_idx ON answers (question_id);
+CREATE INDEX answer_reported_idx ON answers (reported);
+CREATE INDEX question_reported_idx ON questions (reported);
