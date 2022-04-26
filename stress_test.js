@@ -14,18 +14,6 @@ export const options = {
     { duration: '30s', target: 0 }, // scale down. Recovery stage.
   ],
 };
-// export const options = {
-//   scenarios: {
-//     constant_request_rate: {
-//       executor: 'constant-arrival-rate',
-//       rate: 1000,
-//       timeUnit: '1s',
-//       duration: '60s',
-//       preAllocatedVUs: 100,
-//       maxVUs: 100,
-//     },
-//   },
-// };
 
 function getRandomInt(min, max) {
   min = Math.ceil(min);
