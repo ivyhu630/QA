@@ -1,7 +1,7 @@
 FROM node:16.14
 WORKDIR /QA
-COPY package.json /QA/package.json
+COPY ["package.json", "package-lock.json*", "./"]
 RUN npm install
 ENV PORT 80
-COPY . /QA
+COPY . .
 CMD [ "npm", "start" ]
