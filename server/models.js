@@ -1,9 +1,10 @@
+const { createClient } = require('redis');
 const db = require('../db');
 
 module.exports = {
+  // http://localhost:3001/qa/questions/555/answers/?page=1&count=5
   listAnswers: async (req, res) => {
     const { question_id } = req.params;
-    const { count = 5, page = 1 } = req.query;
     const query = `
       SELECT
         a.question_id::TEXT as question,
@@ -36,8 +37,21 @@ module.exports = {
       GROUP BY 1
     `;
     try {
-      const { rows } = await db.query(query, [question_id, page, count]);
-      res.status(200).send(rows[0]);
+      (async () => {
+        const client = createClient();
+        client.on('error', (err) => console.log('Redis Client Error', err));
+        await client.connect();
+        // await client.set('key', 'value');
+        const answers = await client.get(question_id);
+        if (answers != null) {
+          return res.status(200).send(JSON.parse(answers));
+        }
+        const { count = 5, page = 1 } = req.query;
+        const { rows } = await db.query(query, [question_id, page, count]);
+        // await client.setex(question_id, DEFAULT_EXPIRATION, JSON.stringify(rows[0]));
+        await client.set(question_id, JSON.stringify(rows[0]));
+        return res.status(200).send(rows[0]);
+      })();
     } catch (err) {
       res.status(500).send(err);
     }
@@ -107,7 +121,9 @@ module.exports = {
     }
   },
   PostQuestions: async (req, res) => {
-    const { product_id, body, name, email } = req.body;
+    const {
+      product_id, body, name, email,
+    } = req.body;
     const query = `
       INSERT INTO questions(product_id,body,asker_name,asker_email)
       VALUES ($1, $2, $3, $4 )
@@ -123,7 +139,9 @@ module.exports = {
   },
   PostAnswers: async (req, res) => {
     const { question_id } = req.params;
-    const { body, name, email, photos } = req.body;
+    const {
+      body, name, email, photos,
+    } = req.body;
     const query = `
       WITH a as (
         INSERT INTO answers (question_id,body,answerer_name,email)
