@@ -9,8 +9,8 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   port: process.env.DB_PORT,
   max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  // idleTimeoutMillis: 30000,
+  // connectionTimeoutMillis: 2000,
 });
 module.exports = {
   query: (text, params) => pool.query(text, params),
