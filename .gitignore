@@ -9,3 +9,5 @@ Data/
 .env
 
 DockerFile
+
+dockerBuild.sh

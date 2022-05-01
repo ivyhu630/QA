@@ -1,8 +1,15 @@
 const { createClient } = require('redis');
 const db = require('../db');
+require('dotenv').config();
 
+// const client = createClient({
+//   url: process.env.REDIS_URL,
+// });
+// client.on('error', (err) => console.log('Redis Client Error', err));
+// (async () => {
+//   await client.connect();
+// })();
 module.exports = {
-  // http://localhost:3001/qa/questions/555/answers/?page=1&count=5
   listAnswers: async (req, res) => {
     const { question_id } = req.params;
     const query = `
@@ -38,19 +45,15 @@ module.exports = {
     `;
     try {
       (async () => {
-        const client = createClient();
-        client.on('error', (err) => console.log('Redis Client Error', err));
-        await client.connect();
-        // await client.set('key', 'value');
-        const answers = await client.get(question_id);
-        if (answers != null) {
-          return res.status(200).send(JSON.parse(answers));
-        }
+        // const answers = await client.get(question_id);
+        // if (answers != null) {
+        //   return res.status(200).send(JSON.parse(answers));
+        // }
         const { count = 5, page = 1 } = req.query;
         const { rows } = await db.query(query, [question_id, page, count]);
-        // await client.setex(question_id, DEFAULT_EXPIRATION, JSON.stringify(rows[0]));
-        await client.set(question_id, JSON.stringify(rows[0]));
-        return res.status(200).send(rows[0]);
+        const data = rows[0] || { question_id, page, count, results: [] };
+        // await client.set(question_id, JSON.stringify(data));
+        return res.status(200).send(data);
       })();
     } catch (err) {
       res.status(500).send(err);
